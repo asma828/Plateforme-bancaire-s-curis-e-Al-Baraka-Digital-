@@ -1,0 +1,76 @@
+
+services:
+  # Base de données MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: albaraka-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_NAME:-albaraka}
+      MYSQL_USER: ${DB_USER:-albaraka}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-albaraka123}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - albaraka-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:21.1.1
+    container_name: albaraka-keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: adminpassword
+    command: start-dev
+    ports:
+      - "8081:8080"
+    networks:
+      - albaraka-network
+
+  # Application Spring Boot
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: albaraka-app
+    environment:
+      # Configuration Base de données
+      DB_URL: jdbc:mysql://mysql:3306/${DB_NAME:-albaraka}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      DB_USER: ${DB_USER:-albaraka}
+      DB_PASSWORD: ${DB_PASSWORD:-rootpassword}
+
+      # Configuration JWT
+      JWT_SECRET: ${JWT_SECRET:-albaraka-secret-key-for-jwt-token-generation-must-be-at-least-256-bits-long}
+
+      # Configuration Java
+      JAVA_OPTS: -Xmx512m -Xms256m
+
+      # Profil Spring
+      SPRING_PROFILES_ACTIVE: prod
+    ports:
+      - "8080:8080"
+    volumes:
+      - app-uploads:/app/uploads
+    networks:
+      - albaraka-network
+    depends_on:
+        - mysql
+        - keycloak
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+    driver: local
+  app-uploads:
+    driver: local
+
+networks:
+  albaraka-network:
+    driver: bridge
