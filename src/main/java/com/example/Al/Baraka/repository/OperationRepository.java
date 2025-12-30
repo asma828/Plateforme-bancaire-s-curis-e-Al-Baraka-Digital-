@@ -27,4 +27,7 @@ public interface OperationRepository extends JpaRepository<Operation, Long> {
     @Query("SELECT o FROM Operation o WHERE o.accountSource = :account OR o.accountDestination = :account ORDER BY o.createdAt DESC")
     List<Operation> findByAccountOrderByCreatedAtDesc(@Param("account") Account account);
 
+    @Query("SELECT o FROM Operation o WHERE o.status = 'PENDING' ORDER BY o.createdAt ASC")
+    List<Operation> findPendingOperations();
+
 }

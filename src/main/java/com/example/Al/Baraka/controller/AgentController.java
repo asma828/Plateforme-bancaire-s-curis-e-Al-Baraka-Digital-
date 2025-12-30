@@ -1,6 +1,5 @@
 package com.example.Al.Baraka.controller;
 
-
 import com.example.Al.Baraka.dto.response.ApiResponse;
 import com.example.Al.Baraka.dto.response.OperationResponse;
 import com.example.Al.Baraka.dto.request.ValidationRequest;
@@ -23,7 +22,27 @@ public class AgentController {
     private final AgentService agentService;
     private final DocumentService documentService;
 
-    // Approuver une opération
+    /**
+     * Endpoint protégé par OAuth2 - Scope: operations.read
+     * L'agent doit présenter un access token OAuth2 valide depuis Keycloak
+     */
+    @GetMapping("/operations/pending")
+    public ResponseEntity<ApiResponse<List<OperationResponse>>> getPendingOperations() {
+        try {
+            List<OperationResponse> operations = agentService.getPendingOperations();
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Pending operations retrieved successfully",
+                    operations
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /**
+     * Approuver une opération - Protégé par JWT
+     */
     @PutMapping("/operations/{id}/approve")
     public ResponseEntity<ApiResponse<OperationResponse>> approveOperation(
             @PathVariable Long id,
@@ -42,7 +61,9 @@ public class AgentController {
         }
     }
 
-    // Rejeter une opération
+    /**
+     * Rejeter une opération - Protégé par JWT
+     */
     @PutMapping("/operations/{id}/reject")
     public ResponseEntity<ApiResponse<OperationResponse>> rejectOperation(
             @PathVariable Long id,
@@ -61,7 +82,9 @@ public class AgentController {
         }
     }
 
-    // Consulter le document d'une opération
+    /**
+     * Consulter le document d'une opération - Protégé par JWT
+     */
     @GetMapping("/operations/{operationId}/document")
     public ResponseEntity<?> getOperationDocument(@PathVariable Long operationId) {
         try {

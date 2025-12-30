@@ -25,6 +25,12 @@ public class AgentService {
     private final AccountRepository accountRepository;
     private final UserRepository userRepository;
 
+    public List<OperationResponse> getPendingOperations() {
+        return operationRepository.findPendingOperations().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
 
     @Transactional
     public OperationResponse approveOperation(Long operationId, String agentEmail) {
