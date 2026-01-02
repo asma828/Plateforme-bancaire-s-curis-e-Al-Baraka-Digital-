@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Détails de l'opération</title>
+</head>
+<body>
+<div layout:fragment="content">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a th:href="@{/web/client/dashboard}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Opération #<span th:text="${operation.id}"></span></li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">
+                <i class="bi bi-file-text me-2"></i>Opération #<span th:text="${operation.id}"></span>
+            </h2>
+            <p class="text-muted mb-0">Détails complets de votre opération</p>
+        </div>
+        <a th:href="@{/web/client/dashboard}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Retour
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Informations principales -->
+        <div class="col-lg-8">
+            <!-- Status Card -->
+            <div class="card mb-4">
+                <div class="card-header" th:classappend="${operation.status.name() == 'PENDING'} ? 'bg-warning text-dark' :
+                                                             (${operation.status.name() == 'APPROVED'} or ${operation.status.name() == 'COMPLETED'}) ? 'bg-success text-white' :
+                                                             'bg-danger text-white'">
+                    <h5 class="mb-0">
+                        <i th:if="${operation.status.name() == 'PENDING'}" class="bi bi-hourglass-split me-2"></i>
+                        <i th:if="${operation.status.name() == 'APPROVED' or operation.status.name() == 'COMPLETED'}" class="bi bi-check-circle me-2"></i>
+                        <i th:if="${operation.status.name() == 'REJECTED'}" class="bi bi-x-circle me-2"></i>
+                        Statut: <span th:text="${operation.status.name() == 'PENDING' ? 'En attente' :
+                                                    operation.status.name() == 'APPROVED' ? 'Approuvée' :
+                                                    operation.status.name() == 'REJECTED' ? 'Rejetée' : 'Complétée'}"></span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div th:if="${operation.status.name() == 'PENDING'}" class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Opération en attente de validation</strong>
+                        <p class="mb-0 mt-2" th:if="${operation.requiresDocument and !operation.hasDocument}">
+                            Veuillez uploader un document justificatif pour déclencher l'analyse.
+                        </p>
+                        <p class="mb-0 mt-2" th:if="${operation.hasDocument}">
+                            Votre document est en cours d'analyse par notre système IA.
+                        </p>
+                    </div>
+
+                    <div th:if="${operation.status.name() == 'APPROVED' or operation.status.name() == 'COMPLETED'}" class="alert alert-success">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <strong>Opération validée et exécutée avec succès</strong>
+                        <p class="mb-0 mt-2" th:if="${operation.message}" th:text="${operation.message}"></p>
+                    </div>
+
+                    <div th:if="${operation.status.name() == 'REJECTED'}" class="alert alert-danger">
+                        <i class="bi bi-x-circle me-2"></i>
+                        <strong>Opération rejetée</strong>
+                        <p class="mb-0 mt-2">Cette opération n'a pas été approuvée.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Détails de l'opération -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Informations</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Type d'opération</label>
+                            <div class="fw-bold">
+                                    <span th:if="${operation.type.name() == 'DEPOSIT'}" class="badge bg-success">
+                                        <i class="bi bi-arrow-down-circle"></i> Dépôt
+                                    </span>
+                                <span th:if="${operation.type.name() == 'WITHDRAWAL'}" class="badge bg-danger">
+                                        <i class="bi bi-arrow-up-circle"></i> Retrait
+                                    </span>
+                                <span th:if="${operation.type.name() == 'TRANSFER'}" class="badge bg-primary">
+                                        <i class="bi bi-arrow-left-right"></i> Virement
+                                    </span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Montant</label>
+                            <div class="fw-bold fs-4 text-primary">
+                                <span th:text="${#numbers.formatDecimal(operation.amount, 1, 2)}"></span> DH
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Compte source</label>
+                            <div class="fw-bold" th:text="${operation.sourceAccountNumber}"></div>
+                        </div>
+
+                        <div class="col-md-6 mb-3" th:if="${operation.destinationAccountNumber}">
+                            <label class="text-muted small">Compte destinataire</label>
+                            <div class="fw-bold" th:text="${operation.destinationAccountNumber}"></div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Date de création</label>
+                            <div class="fw-bold" th:text="${#temporals.format(operation.createdAt, 'dd/MM/yyyy HH:mm')}"></div>
+                        </div>
+
+                        <div class="col-md-6 mb-3" th:if="${operation.executedAt}">
+                            <label class="text-muted small">Date d'exécution</label>
+                            <div class="fw-bold" th:text="${#temporals.format(operation.executedAt, 'dd/MM/yyyy HH:mm')}"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document -->
+            <div class="card mb-4" th:if="${operation.requiresDocument}">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-file-earmark me-2"></i>Document justificatif</h5>
+                </div>
+                <div class="card-body">
+                    <div th:if="${operation.hasDocument}">
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Document uploadé avec succès
+                        </div>
+                        <a th:href="@{/api/client/operations/{id}/document(id=${operation.id})}"
+                           class="btn btn-outline-primary" target="_blank">
+                            <i class="bi bi-download me-2"></i>Télécharger le document
+                        </a>
+                    </div>
+
+                    <div th:unless="${operation.hasDocument}">
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Aucun document uploadé. L'opération nécessite un justificatif.
+                        </div>
+
+                        <form id="uploadForm" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="document" class="form-label fw-bold">Sélectionner un document</label>
+                                <input type="file" class="form-control" id="document" name="file"
+                                       accept=".pdf,.jpg,.jpeg,.png" required>
+                                <div class="form-text">
+                                    Formats acceptés: PDF, JPG, PNG (max 5MB)
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="uploadBtn">
+                                <i class="bi bi-upload me-2"></i>Uploader le document
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analyse IA -->
+            <div class="card" th:if="${hasAIValidation}">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-robot me-2"></i>Analyse IA</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="text-muted small">Décision</label>
+                            <div>
+                                    <span th:if="${aiValidation.decision.name() == 'APPROVE'}" class="badge badge-ai-approve fs-6">
+                                        <i class="bi bi-check-circle"></i> Approuvé
+                                    </span>
+                                <span th:if="${aiValidation.decision.name() == 'REJECT'}" class="badge badge-ai-reject fs-6">
+                                        <i class="bi bi-x-circle"></i> Rejeté
+                                    </span>
+                                <span th:if="${aiValidation.decision.name() == 'NEED_HUMAN_REVIEW'}" class="badge badge-ai-review fs-6">
+                                        <i class="bi bi-person-check"></i> Revue humaine
+                                    </span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="text-muted small">Confiance</label>
+                            <div class="fw-bold">
+                                <span th:text="${#numbers.formatDecimal(aiValidation.confidenceScore * 100, 1, 0)}"></span>%
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar" role="progressbar"
+                                     th:style="'width: ' + ${aiValidation.confidenceScore * 100} + '%'"
+                                     th:classappend="${aiValidation.confidenceScore >= 0.8} ? 'bg-success' :
+                                                        ${aiValidation.confidenceScore >= 0.5} ? 'bg-warning' : 'bg-danger'">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="text-muted small">Temps d'analyse</label>
+                            <div class="fw-bold">
+                                <span th:text="${aiValidation.processingTimeMs}"></span> ms
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="text-muted small">Raisonnement IA</label>
+                            <div class="alert alert-light mb-0">
+                                <p class="mb-0" th:text="${aiValidation.reasoning}"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Timeline -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Chronologie</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <!-- Création -->
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Opération créée</h6>
+                                <small class="text-muted" th:text="${#temporals.format(operation.createdAt, 'dd/MM/yyyy HH:mm')}"></small>
+                            </div>
+                        </div>
+
+                        <!-- Document uploadé -->
+                        <div class="timeline-item" th:if="${operation.hasDocument}">
+                            <div class="timeline-marker bg-info"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Document uploadé</h6>
+                                <small class="text-muted">Justificatif reçu</small>
+                            </div>
+                        </div>
+
+                        <!-- Analyse IA -->
+                        <div class="timeline-item" th:if="${hasAIValidation}">
+                            <div class="timeline-marker bg-secondary"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Analyse IA</h6>
+                                <small class="text-muted" th:text="${#temporals.format(aiValidation.analyzedAt, 'dd/MM/yyyy HH:mm')}"></small>
+                            </div>
+                        </div>
+
+                        <!-- Validation -->
+                        <div class="timeline-item" th:if="${operation.validatedAt}">
+                            <div class="timeline-marker"
+                                 th:classappend="${operation.status.name() == 'APPROVED'} ? 'bg-success' : 'bg-danger'"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1" th:text="${operation.status.name() == 'APPROVED' ? 'Approuvée' : 'Rejetée'}"></h6>
+                                <small class="text-muted" th:text="${#temporals.format(operation.validatedAt, 'dd/MM/yyyy HH:mm')}"></small>
+                            </div>
+                        </div>
+
+                        <!-- Exécution -->
+                        <div class="timeline-item" th:if="${operation.executedAt}">
+                            <div class="timeline-marker bg-success"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Exécutée</h6>
+                                <small class="text-muted" th:text="${#temporals.format(operation.executedAt, 'dd/MM/yyyy HH:mm')}"></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div layout:fragment="styles">
+    <style>
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 20px;
+        }
+
+        .timeline-item:last-child {
+            padding-bottom: 0;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -22px;
+            top: 10px;
+            bottom: -10px;
+            width: 2px;
+            background-color: #e9ecef;
+        }
+
+        .timeline-item:last-child::before {
+            display: none;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: -27px;
+            top: 5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px #dee2e6;
+        }
+
+        .timeline-content h6 {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+    </style>
+</div>
+
+<div layout:fragment="scripts">
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const uploadForm = document.getElementById('uploadForm');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const operationId = /*[[${operation.id}]]*/ 0;
+
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const fileInput = document.getElementById('document');
+                const file = fileInput.files[0];
+
+                if (!file) {
+                    alert('Veuillez sélectionner un fichier');
+                    return;
+                }
+
+                // Vérifier la taille
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Le fichier ne doit pas dépasser 5MB');
+                    return;
+                }
+
+                uploadBtn.disabled = true;
+                uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Upload en cours...';
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const response = await fetch(`/api/client/operations/${operationId}/document`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        alert('Document uploadé avec succès ! L\'analyse IA est en cours...');
+                        location.reload();
+                    } else {
+                        throw new Error(result.message);
+                    }
+                } catch (error) {
+                    alert('Erreur: ' + error.message);
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = '<i class="bi bi-upload me-2"></i>Uploader le document';
+                }
+            });
+        }
+        /*]]>*/
+    </script>
+</div>
+</body>
+</html>

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Nouvelle Opération</title>
+</head>
+<body>
+<div layout:fragment="content">
+    <!-- Page Header -->
+    <div class="mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a th:href="@{/web/client/dashboard}">Dashboard</a></li>
+                <li class="breadcrumb-item active">Nouvelle Opération</li>
+            </ol>
+        </nav>
+        <h2 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Nouvelle Opération</h2>
+        <p class="text-muted">Créez une nouvelle opération bancaire</p>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Main Form -->
+            <div class="card">
+                <div class="card-body">
+                    <form id="operationForm">
+                        <!-- Type d'opération -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Type d'opération</label>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <input type="radio" class="btn-check" name="type" id="deposit" value="DEPOSIT" checked>
+                                    <label class="btn btn-outline-success w-100 py-3" for="deposit">
+                                        <i class="bi bi-arrow-down-circle fs-3 d-block mb-2"></i>
+                                        <strong>Dépôt</strong>
+                                        <small class="d-block text-muted">Ajouter des fonds</small>
+                                    </label>
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="radio" class="btn-check" name="type" id="withdrawal" value="WITHDRAWAL">
+                                    <label class="btn btn-outline-danger w-100 py-3" for="withdrawal">
+                                        <i class="bi bi-arrow-up-circle fs-3 d-block mb-2"></i>
+                                        <strong>Retrait</strong>
+                                        <small class="d-block text-muted">Retirer des fonds</small>
+                                    </label>
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="radio" class="btn-check" name="type" id="transfer" value="TRANSFER">
+                                    <label class="btn btn-outline-primary w-100 py-3" for="transfer">
+                                        <i class="bi bi-arrow-left-right fs-3 d-block mb-2"></i>
+                                        <strong>Virement</strong>
+                                        <small class="d-block text-muted">Transférer des fonds</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Montant -->
+                        <div class="mb-4">
+                            <label for="amount" class="form-label fw-bold">Montant (DH)</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text"><i class="bi bi-currency-dollar"></i></span>
+                                <input type="number" class="form-control" id="amount" name="amount"
+                                       placeholder="0.00" step="0.01" min="0.01" required>
+                                <span class="input-group-text">DH</span>
+                            </div>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Les opérations supérieures à 10 000 DH nécessitent un justificatif
+                            </div>
+                        </div>
+
+                        <!-- Compte destinataire (pour virement) -->
+                        <div class="mb-4 d-none" id="destinationGroup">
+                            <label for="destinationAccountNumber" class="form-label fw-bold">
+                                Compte destinataire
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text"><i class="bi bi-bank"></i></span>
+                                <input type="text" class="form-control" id="destinationAccountNumber"
+                                       name="destinationAccountNumber" placeholder="AB-XXXXXX">
+                            </div>
+                            <div class="form-text">
+                                Saisissez le numéro de compte du bénéficiaire
+                            </div>
+                        </div>
+
+                        <!-- Alert pour document requis -->
+                        <div class="alert alert-warning d-none" id="documentAlert">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <strong>Document requis !</strong> Cette opération nécessitera un justificatif.
+                            Vous pourrez l'uploader après la création.
+                        </div>
+
+                        <!-- Boutons d'action -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                <i class="bi bi-check-circle me-2"></i>Créer l'opération
+                            </button>
+                            <a th:href="@{/web/client/dashboard}" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-x-circle me-2"></i>Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Info -->
+        <div class="col-lg-4">
+            <!-- Informations -->
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-info-circle me-2"></i>Informations
+                </div>
+                <div class="card-body">
+                    <h6 class="fw-bold">Validation automatique</h6>
+                    <p class="small mb-3">
+                        Les opérations ≤ 10 000 DH sont validées automatiquement.
+                    </p>
+
+                    <h6 class="fw-bold">Validation manuelle</h6>
+                    <p class="small mb-3">
+                        Les opérations > 10 000 DH nécessitent :
+                    </p>
+                    <ul class="small mb-3">
+                        <li>Upload d'un justificatif</li>
+                        <li>Analyse IA automatique</li>
+                        <li>Validation par un agent (si nécessaire)</li>
+                    </ul>
+
+                    <h6 class="fw-bold">Documents acceptés</h6>
+                    <ul class="small mb-0">
+                        <li>PDF (max 5MB)</li>
+                        <li>Images JPG/PNG (max 5MB)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Types d'opération -->
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <i class="bi bi-book me-2"></i>Guide rapide
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge bg-success me-2"><i class="bi bi-arrow-down-circle"></i></span>
+                            <strong>Dépôt</strong>
+                        </div>
+                        <p class="small text-muted mb-0">Ajoutez des fonds à votre compte</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge bg-danger me-2"><i class="bi bi-arrow-up-circle"></i></span>
+                            <strong>Retrait</strong>
+                        </div>
+                        <p class="small text-muted mb-0">Retirez des fonds de votre compte</p>
+                    </div>
+
+                    <div class="mb-0">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge bg-primary me-2"><i class="bi bi-arrow-left-right"></i></span>
+                            <strong>Virement</strong>
+                        </div>
+                        <p class="small text-muted mb-0">Transférez des fonds vers un autre compte</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts personnalisés -->
+<div layout:fragment="scripts">
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const form = document.getElementById('operationForm');
+        const amountInput = document.getElementById('amount');
+        const documentAlert = document.getElementById('documentAlert');
+        const destinationGroup = document.getElementById('destinationGroup');
+        const destinationInput = document.getElementById('destinationAccountNumber');
+        const typeRadios = document.querySelectorAll('input[name="type"]');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Afficher/masquer le champ destinataire selon le type
+        typeRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'TRANSFER') {
+                    destinationGroup.classList.remove('d-none');
+                    destinationInput.required = true;
+                } else {
+                    destinationGroup.classList.add('d-none');
+                    destinationInput.required = false;
+                }
+            });
+        });
+
+        // Afficher l'alerte si montant > 10000
+        amountInput.addEventListener('input', function() {
+            const amount = parseFloat(this.value);
+            if (amount > 10000) {
+                documentAlert.classList.remove('d-none');
+            } else {
+                documentAlert.classList.add('d-none');
+            }
+        });
+
+        // Soumission du formulaire
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const type = document.querySelector('input[name="type"]:checked').value;
+            const amount = parseFloat(amountInput.value);
+            const destinationAccountNumber = destinationInput.value;
+
+            // Validation
+            if (type === 'TRANSFER' && !destinationAccountNumber) {
+                alert('Veuillez saisir le compte destinataire');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Création...';
+
+            try {
+                const token = /*[[${token}]]*/ localStorage.getItem('token');
+
+                const payload = {
+                    type: type,
+                    amount: amount
+                };
+
+                if (type === 'TRANSFER') {
+                    payload.destinationAccountNumber = destinationAccountNumber;
+                }
+
+                const response = await fetch('/api/client/operations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Si montant > 10000, rediriger vers upload
+                    if (amount > 10000) {
+                        window.location.href = '/web/client/operations/' + result.data.id + '?upload=true';
+                    } else {
+                        // Sinon, retour au dashboard avec message
+                        window.location.href = '/web/client/dashboard?message=Opération créée avec succès';
+                    }
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Créer l\'opération';
+            }
+        });
+
+        // Charger le token au chargement de la page
+        window.addEventListener('DOMContentLoaded', function() {
+            // Récupérer le token depuis le cookie de session
+            // Ou utiliser une autre méthode pour l'authentification web
+        });
+        /*]]>*/
+    </script>
+</div>
+</body>
+</html>

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Validation d'opération</title>
+</head>
+<body>
+<div layout:fragment="content">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a th:href="@{/web/agent/dashboard}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Validation #<span th:text="${operation.id}"></span></li>
+        </ol>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">
+                <i class="bi bi-shield-check me-2"></i>Validation Opération #<span th:text="${operation.id}"></span>
+            </h2>
+            <p class="text-muted mb-0">Examinez et validez cette opération</p>
+        </div>
+        <a th:href="@{/web/agent/dashboard}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Retour
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Colonne principale -->
+        <div class="col-lg-8">
+            <!-- Recommandation IA -->
+            <div class="card mb-4" th:if="${hasAIValidation}">
+                <div class="card-header"
+                     th:classappend="${aiValidation.decision.name() == 'APPROVE'} ? 'bg-success text-white' :
+                                        ${aiValidation.decision.name() == 'REJECT'} ? 'bg-danger text-white' :
+                                        'bg-warning text-dark'">
+                    <h5 class="mb-0">
+                        <i class="bi bi-robot me-2"></i>Recommandation IA
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center mb-3">
+                        <div class="col-md-4">
+                            <label class="text-muted small d-block mb-2">Décision recommandée</label>
+                            <h4 class="mb-0">
+                                    <span th:if="${aiValidation.decision.name() == 'APPROVE'}" class="badge badge-ai-approve fs-5">
+                                        <i class="bi bi-check-circle"></i> APPROUVER
+                                    </span>
+                                <span th:if="${aiValidation.decision.name() == 'REJECT'}" class="badge badge-ai-reject fs-5">
+                                        <i class="bi bi-x-circle"></i> REJETER
+                                    </span>
+                                <span th:if="${aiValidation.decision.name() == 'NEED_HUMAN_REVIEW'}" class="badge badge-ai-review fs-5">
+                                        <i class="bi bi-person-check"></i> RÉVISION MANUELLE
+                                    </span>
+                            </h4>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="text-muted small d-block mb-2">Niveau de confiance</label>
+                            <div class="d-flex align-items-center">
+                                <h4 class="mb-0 me-2">
+                                    <span th:text="${#numbers.formatDecimal(aiValidation.confidenceScore * 100, 1, 0)}"></span>%
+                                </h4>
+                                <div class="flex-grow-1">
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar" role="progressbar"
+                                             th:style="'width: ' + ${aiValidation.confidenceScore * 100} + '%'"
+                                             th:classappend="${aiValidation.confidenceScore >= 0.8} ? 'bg-success' :
+                                                                ${aiValidation.confidenceScore >= 0.5} ? 'bg-warning' : 'bg-danger'">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="text-muted small d-block mb-2">Temps d'analyse</label>
+                            <h5 class="mb-0">
+                                <i class="bi bi-stopwatch me-1"></i>
+                                <span th:text="${aiValidation.processingTimeMs}"></span> ms
+                            </h5>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-light mb-0">
+                        <strong><i class="bi bi-lightbulb me-2"></i>Raisonnement de l'IA :</strong>
+                        <p class="mb-0 mt-2" th:text="${aiValidation.reasoning}"></p>
+                    </div>
+
+                    <div class="mt-3" th:if="${aiValidation.extractedText}">
+                        <button class="btn btn-sm btn-outline-secondary" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#extractedText">
+                            <i class="bi bi-file-text me-1"></i>Voir le texte extrait
+                        </button>
+                        <div class="collapse mt-2" id="extractedText">
+                            <div class="border rounded p-3 bg-light" style="max-height: 300px; overflow-y: auto;">
+                                <pre class="mb-0 small" th:text="${aiValidation.extractedText}"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations de l'opération -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Détails de l'opération</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Type</label>
+                            <div>
+                                    <span th:if="${operation.type.name() == 'DEPOSIT'}" class="badge bg-success fs-6">
+                                        <i class="bi bi-arrow-down-circle"></i> Dépôt
+                                    </span>
+                                <span th:if="${operation.type.name() == 'WITHDRAWAL'}" class="badge bg-danger fs-6">
+                                        <i class="bi bi-arrow-up-circle"></i> Retrait
+                                    </span>
+                                <span th:if="${operation.type.name() == 'TRANSFER'}" class="badge bg-primary fs-6">
+                                        <i class="bi bi-arrow-left-right"></i> Virement
+                                    </span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Montant</label>
+                            <div class="fw-bold fs-3 text-primary">
+                                <span th:text="${#numbers.formatDecimal(operation.amount, 1, 2)}"></span> DH
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Compte source</label>
+                            <div class="fw-bold" th:text="${operation.sourceAccountNumber}"></div>
+                        </div>
+
+                        <div class="col-md-6 mb-3" th:if="${operation.destinationAccountNumber}">
+                            <label class="text-muted small">Compte destinataire</label>
+                            <div class="fw-bold" th:text="${operation.destinationAccountNumber}"></div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Date de création</label>
+                            <div th:text="${#temporals.format(operation.createdAt, 'dd/MM/yyyy HH:mm')}"></div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Document</label>
+                            <div>
+                                    <span th:if="${operation.hasDocument}" class="text-success">
+                                        <i class="bi bi-check-circle-fill"></i> Document fourni
+                                    </span>
+                                <span th:unless="${operation.hasDocument}" class="text-danger">
+                                        <i class="bi bi-x-circle-fill"></i> Aucun document
+                                    </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document viewer -->
+            <div class="card mb-4" th:if="${operation.hasDocument}">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-file-earmark-pdf me-2"></i>Document justificatif</h5>
+                </div>
+                <div class="card-body text-center">
+                    <a th:href="@{/api/agent/operations/{id}/document(id=${operation.id})}"
+                       class="btn btn-primary btn-lg" target="_blank">
+                        <i class="bi bi-eye me-2"></i>Visualiser le document
+                    </a>
+                    <a th:href="@{/api/agent/operations/{id}/document(id=${operation.id})}"
+                       class="btn btn-outline-secondary btn-lg" download>
+                        <i class="bi bi-download me-2"></i>Télécharger
+                    </a>
+                </div>
+            </div>
+
+            <!-- Actions de validation -->
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-hand-thumbs-up me-2"></i>Décision finale</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">
+                        En tant qu'agent bancaire, vous avez le dernier mot sur cette opération.
+                        Prenez en compte la recommandation de l'IA et le document fourni.
+                    </p>
+
+                    <div class="d-flex gap-3">
+                        <button type="button" class="btn btn-success btn-lg flex-fill"
+                                onclick="validateOperation(true)">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Approuver l'opération
+                        </button>
+                        <button type="button" class="btn btn-danger btn-lg flex-fill"
+                                onclick="validateOperation(false)">
+                            <i class="bi bi-x-circle me-2"></i>
+                            Rejeter l'opération
+                        </button>
+                    </div>
+
+                    <div class="mt-3">
+                        <label for="comment" class="form-label">Commentaire (optionnel)</label>
+                        <textarea class="form-control" id="comment" rows="3"
+                                  placeholder="Ajoutez un commentaire sur votre décision..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Guide de validation -->
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Guide de validation</h6>
+                </div>
+                <div class="card-body">
+                    <h6 class="fw-bold">✅ À vérifier :</h6>
+                    <ul class="small mb-3">
+                        <li>Document clair et lisible</li>
+                        <li>Montant cohérent</li>
+                        <li>Justification appropriée</li>
+                        <li>Pas de signe de fraude</li>
+                    </ul>
+
+                    <h6 class="fw-bold">🤖 Confiance IA :</h6>
+                    <ul class="small mb-0">
+                        <li><strong>&gt; 80% :</strong> Haute confiance</li>
+                        <li><strong>50-80% :</strong> Confiance moyenne</li>
+                        <li><strong>&lt; 50% :</strong> Faible confiance</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Statistiques -->
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>Vos statistiques</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted">Opérations validées aujourd'hui</small>
+                        <h4 class="mb-0">0</h4>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Taux d'approbation</small>
+                        <h4 class="mb-0">0%</h4>
+                    </div>
+                    <div>
+                        <small class="text-muted">Accord avec l'IA</small>
+                        <h4 class="mb-0">0%</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div layout:fragment="scripts">
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const operationId = /*[[${operation.id}]]*/ 0;
+
+        async function validateOperation(approve) {
+            const action = approve ? 'approuver' : 'rejeter';
+
+            if (!confirm(`Êtes-vous sûr de vouloir ${action} cette opération ?`)) {
+                return;
+            }
+
+            const comment = document.getElementById('comment').value;
+            const endpoint = approve ? 'approve' : 'reject';
+
+            try {
+                const response = await fetch(`/api/agent/operations/${operationId}/${endpoint}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ comment: comment || null })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(`Opération ${approve ? 'approuvée' : 'rejetée'} avec succès !`);
+                    window.location.href = '/web/agent/dashboard';
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+        /*]]>*/
+    </script>
+</div>
+</body>
+</html>

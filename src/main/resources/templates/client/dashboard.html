@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Dashboard Client</title>
+</head>
+<body>
+<div layout:fragment="content">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Mon Dashboard</h2>
+            <p class="text-muted mb-0">Bienvenue, <span th:text="${account.ownerFullName}"></span></p>
+        </div>
+        <a th:href="@{/web/client/operations/new}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Nouvelle Opération
+        </a>
+    </div>
+
+    <!-- Account Info Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5 class="card-title mb-3">
+                        <i class="bi bi-credit-card me-2"></i>Informations du compte
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <small class="text-muted">Numéro de compte</small>
+                            <div class="fw-bold" th:text="${account.accountNumber}"></div>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <small class="text-muted">Titulaire</small>
+                            <div class="fw-bold" th:text="${account.ownerFullName}"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-end">
+                    <small class="text-muted">Solde actuel</small>
+                    <h2 class="mb-0 text-primary">
+                        <span th:text="${#numbers.formatDecimal(account.balance, 1, 2)}"></span> DH
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="stat-card primary">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0" th:text="${totalOperations}">0</h3>
+                        <small>Total opérations</small>
+                    </div>
+                    <div class="display-4 opacity-50">
+                        <i class="bi bi-list-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card warning">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0" th:text="${pendingCount}">0</h3>
+                        <small>En attente</small>
+                    </div>
+                    <div class="display-4 opacity-50">
+                        <i class="bi bi-hourglass-split"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card success">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0" th:text="${completedCount}">0</h3>
+                        <small>Complétées</small>
+                    </div>
+                    <div class="display-4 opacity-50">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Operations -->
+    <div class="card">
+        <div class="card-header bg-white">
+            <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Opérations récentes</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Type</th>
+                        <th>Montant</th>
+                        <th>Statut</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${operations.empty}">
+                        <td colspan="6" class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                            Aucune opération pour le moment
+                        </td>
+                    </tr>
+                    <tr th:each="operation : ${operations}">
+                        <td class="align-middle">#<span th:text="${operation.id}"></span></td>
+                        <td class="align-middle">
+                                    <span th:if="${operation.type.name() == 'DEPOSIT'}" class="badge bg-success">
+                                        <i class="bi bi-arrow-down-circle"></i> Dépôt
+                                    </span>
+                            <span th:if="${operation.type.name() == 'WITHDRAWAL'}" class="badge bg-danger">
+                                        <i class="bi bi-arrow-up-circle"></i> Retrait
+                                    </span>
+                            <span th:if="${operation.type.name() == 'TRANSFER'}" class="badge bg-primary">
+                                        <i class="bi bi-arrow-left-right"></i> Virement
+                                    </span>
+                        </td>
+                        <td class="align-middle fw-bold">
+                            <span th:text="${#numbers.formatDecimal(operation.amount, 1, 2)}"></span> DH
+                        </td>
+                        <td class="align-middle">
+                                    <span th:if="${operation.status.name() == 'PENDING'}" class="badge bg-warning">
+                                        <i class="bi bi-hourglass"></i> En attente
+                                    </span>
+                            <span th:if="${operation.status.name() == 'APPROVED'}" class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> Approuvée
+                                    </span>
+                            <span th:if="${operation.status.name() == 'REJECTED'}" class="badge bg-danger">
+                                        <i class="bi bi-x-circle"></i> Rejetée
+                                    </span>
+                            <span th:if="${operation.status.name() == 'COMPLETED'}" class="badge bg-info">
+                                        <i class="bi bi-check2-all"></i> Complétée
+                                    </span>
+                        </td>
+                        <td class="align-middle">
+                            <span th:text="${#temporals.format(operation.createdAt, 'dd/MM/yyyy HH:mm')}"></span>
+                        </td>
+                        <td class="align-middle">
+                            <a th:href="@{/web/client/operations/{id}(id=${operation.id})}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> Détails
+                            </a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

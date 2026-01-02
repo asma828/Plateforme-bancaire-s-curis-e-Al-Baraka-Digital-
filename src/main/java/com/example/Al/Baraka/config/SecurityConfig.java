@@ -22,6 +22,10 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
+
+import javax.sql.DataSource;
 
 @Configuration
 @EnableWebSecurity
@@ -31,10 +35,11 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
+    private final DataSource dataSource;
 
     /**
      * Configuration OAuth2 pour l'endpoint /api/agent/operations/pending
-     * Priorité 1 - sera évalué en premier
+     * Priorité 1
      */
     @Bean
     @Order(1)
@@ -56,29 +61,81 @@ public class SecurityConfig {
     }
 
     /**
-     * Configuration JWT pour tous les autres endpoints
-     * Priorité 2 - sera évalué après OAuth2
+     * Configuration pour l'interface Web Thymeleaf
+     * Priorité 2 - Session-based avec Remember-Me
      */
     @Bean
     @Order(2)
-    public SecurityFilterChain jwtSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
         http
+                .securityMatcher("/web/**", "/login", "/logout", "/", "/css/**", "/js/**", "/images/**")
+                .csrf(csrf -> csrf
+                        .ignoringRequestMatchers("/h2-console/**")
+                )
+                .authorizeHttpRequests(auth -> auth
+                        // Ressources publiques
+                        .requestMatchers("/", "/login", "/css/**", "/js/**", "/images/**").permitAll()
+                        .requestMatchers("/h2-console/**").permitAll()
+
+                        // Pages web par rôle
+                        .requestMatchers("/web/client/**").hasRole("CLIENT")
+                        .requestMatchers("/web/agent/**").hasRole("AGENT_BANCAIRE")
+                        .requestMatchers("/web/admin/**").hasRole("ADMIN")
+
+                        .anyRequest().authenticated()
+                )
+                .formLogin(form -> form
+                        .loginPage("/login")
+                        .loginProcessingUrl("/login")
+                        .defaultSuccessUrl("/web/dashboard", true)
+                        .failureUrl("/login?error=true")
+                        .permitAll()
+                )
+                .logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .logoutSuccessUrl("/login?logout=true")
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID", "remember-me")
+                        .permitAll()
+                )
+                .rememberMe(remember -> remember
+                        .key("albaraka-remember-me-key")
+                        .tokenRepository(persistentTokenRepository())
+                        .tokenValiditySeconds(7 * 24 * 60 * 60) // 7 jours
+                        .userDetailsService(userDetailsService)
+                )
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                        .maximumSessions(1)
+                        .maxSessionsPreventsLogin(false)
+                );
+
+        // Pour H2 Console
+        http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
+
+        return http.build();
+    }
+
+    /**
+     * Configuration JWT pour les endpoints API
+     * Priorité 3
+     */
+    @Bean
+    @Order(3)
+    public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/api/**", "/auth/**")
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         // Endpoints publics
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/h2-console/**").permitAll()
 
-                        // Endpoints clients
+                        // Endpoints API par rôle
                         .requestMatchers("/api/client/**").hasRole("CLIENT")
-
-                        // Endpoints agents bancaires (sauf /pending qui est géré par OAuth2)
                         .requestMatchers("/api/agent/**").hasRole("AGENT_BANCAIRE")
-
-                        // Endpoints admins
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/ai-test/**").permitAll() // Pour les tests
 
-                        // Toutes les autres requêtes nécessitent une authentification
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -87,10 +144,18 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
-        // Pour H2 Console (développement uniquement)
-        http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
-
         return http.build();
+    }
+
+    /**
+     * Repository pour les tokens Remember-Me persistants
+     */
+    @Bean
+    public PersistentTokenRepository persistentTokenRepository() {
+        JdbcTokenRepositoryImpl tokenRepository = new JdbcTokenRepositoryImpl();
+        tokenRepository.setDataSource(dataSource);
+
+        return tokenRepository;
     }
 
     @Bean
@@ -111,14 +176,9 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * Configuration du JwtDecoder pour OAuth2
-     * Valide les tokens JWT émis par Keycloak
-     */
     @Bean
     public JwtDecoder jwtDecoder(@Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}") String issuerUri) {
         try {
-            // Construction du JWK Set URI à partir de l'issuer URI
             String jwkSetUri = issuerUri + "/protocol/openid-connect/certs";
             return NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
         } catch (Exception e) {

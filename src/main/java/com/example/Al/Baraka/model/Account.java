@@ -11,10 +11,12 @@ import java.util.List;
 
 @Entity
 @Table(name = "accounts")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = {"owner", "sourceOperations", "destinationOperations"}) // Exclure les collections
 @EntityListeners(AuditingEntityListener.class)
 public class Account {
 
@@ -28,7 +30,7 @@ public class Account {
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal balance = BigDecimal.ZERO;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
@@ -36,9 +38,9 @@ public class Account {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @OneToMany(mappedBy = "accountSource", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "accountSource", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Operation> sourceOperations;
 
-    @OneToMany(mappedBy = "accountDestination", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "accountDestination", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Operation> destinationOperations;
 }
