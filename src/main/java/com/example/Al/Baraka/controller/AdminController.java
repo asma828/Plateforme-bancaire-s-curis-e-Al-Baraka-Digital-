@@ -21,7 +21,6 @@ public class AdminController {
 
     private final AdminService adminService;
 
-    // Créer un nouvel utilisateur (Client, Agent, ou Admin)
     @PostMapping("/users")
     public ResponseEntity<ApiResponse<UserResponse>> createUser(@Valid @RequestBody UserRequest request) {
         try {
@@ -34,7 +33,6 @@ public class AdminController {
         }
     }
 
-    // Mettre à jour un utilisateur
     @PutMapping("/users/{id}")
     public ResponseEntity<ApiResponse<UserResponse>> updateUser(
             @PathVariable Long id,
@@ -48,7 +46,6 @@ public class AdminController {
         }
     }
 
-    // Supprimer un utilisateur
     @DeleteMapping("/users/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
         try {
@@ -60,7 +57,6 @@ public class AdminController {
         }
     }
 
-    // Activer/Désactiver un utilisateur
     @PatchMapping("/users/{id}/toggle-status")
     public ResponseEntity<ApiResponse<UserResponse>> toggleUserStatus(@PathVariable Long id) {
         try {
@@ -72,7 +68,6 @@ public class AdminController {
         }
     }
 
-    // Lister tous les utilisateurs
     @GetMapping("/users")
     public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
         try {
@@ -84,7 +79,6 @@ public class AdminController {
         }
     }
 
-    // Récupérer un utilisateur par ID
     @GetMapping("/users/{id}")
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(@PathVariable Long id) {
         try {
@@ -96,7 +90,6 @@ public class AdminController {
         }
     }
 
-    // Filtrer les utilisateurs par rôle
     @GetMapping("/users/role/{role}")
     public ResponseEntity<ApiResponse<List<UserResponse>>> getUsersByRole(@PathVariable Role role) {
         try {
