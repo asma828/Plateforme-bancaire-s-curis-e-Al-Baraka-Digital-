@@ -30,7 +30,7 @@ jobs:
       - name: 🔍 Verify Maven version
         run: mvn --version
 
-      - name: 📦 Build with Maven (skip tests)
+      - name: 📦 Build with Maven
         run: mvn clean package -DskipTests
 
       - name: ✅ Build completed
