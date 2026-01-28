@@ -16,7 +16,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = {"owner", "sourceOperations", "destinationOperations"}) // Exclure les collections
+@ToString(exclude = {"owner", "sourceOperations", "destinationOperations"})
 @EntityListeners(AuditingEntityListener.class)
 public class Account {
 

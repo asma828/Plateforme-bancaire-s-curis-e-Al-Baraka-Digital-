@@ -64,6 +64,7 @@ public class ClientController {
     public ResponseEntity<ApiResponse<List<OperationResponse>>> getOperations(Authentication authentication) {
         try {
             String email = authentication.getName();
+
             List<OperationResponse> operations = operationService.getOperationsByEmail(email);
             return ResponseEntity.ok(ApiResponse.success("Operations retrieved successfully", operations));
         } catch (Exception e) {

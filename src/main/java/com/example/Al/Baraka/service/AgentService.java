@@ -125,6 +125,25 @@ public class AgentService {
         accountRepository.save(destinationAccount);
     }
 
+    @Transactional(readOnly = true)
+    public OperationResponse getOperationById(Long operationId, String agentEmail) {
+
+        Operation operation = operationRepository.findById(operationId)
+                .orElseThrow(() -> new RuntimeException("Operation not found"));
+
+        User agent = userRepository.findByEmail(agentEmail)
+                .orElseThrow(() -> new RuntimeException("Agent not found"));
+
+        // Optional but RECOMMENDED: restrict access
+        // Example rule: agent can only see PENDING operations
+        if (operation.getStatus() != OperationStatus.PENDING) {
+            throw new RuntimeException("You are not allowed to access this operation");
+        }
+
+        return mapToResponse(operation);
+    }
+
+
     private OperationResponse mapToResponse(Operation operation) {
         return OperationResponse.builder()
                 .id(operation.getId())

@@ -40,6 +40,20 @@ public class AgentController {
         }
     }
 
+    @GetMapping("/operations/{id}")
+    public ResponseEntity<ApiResponse<OperationResponse>> getOperationById(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        String agentEmail = authentication.getName();
+        OperationResponse operation = agentService.getOperationById(id, agentEmail);
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Operation retrieved successfully", operation)
+        );
+    }
+
+
     /**
      * Approuver une opération - Protégé par JWT
      */

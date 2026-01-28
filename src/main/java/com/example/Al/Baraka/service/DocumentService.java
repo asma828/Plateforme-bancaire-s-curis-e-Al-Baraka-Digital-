@@ -1,8 +1,6 @@
 package com.example.Al.Baraka.service;
 
-import com.example.Al.Baraka.enums.AIDecision;
 import com.example.Al.Baraka.enums.OperationStatus;
-import com.example.Al.Baraka.model.AIValidation;
 import com.example.Al.Baraka.model.Document;
 import com.example.Al.Baraka.model.Operation;
 import com.example.Al.Baraka.repository.DocumentRepository;
@@ -19,7 +17,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -31,7 +28,6 @@ public class DocumentService {
 
     private final DocumentRepository documentRepository;
     private final OperationRepository operationRepository;
-    private final AIDocumentAnalysisService aiAnalysisService;
 
     @Value("${file.upload-dir}")
     private String uploadDir;
@@ -40,7 +36,8 @@ public class DocumentService {
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
     /**
-     * Upload un document et déclenche l'analyse IA automatique
+     * Upload un document
+     * Note: L'analyse IA a été retirée temporairement
      */
     @Transactional
     public Document uploadDocument(Long operationId, MultipartFile file) throws IOException {
@@ -86,91 +83,7 @@ public class DocumentService {
         document = documentRepository.save(document);
         log.info("📎 Document uploaded for operation #{}: {}", operationId, originalFilename);
 
-        // 🤖 Déclencher l'analyse IA automatique
-        try {
-            AIValidation aiValidation = aiAnalysisService.analyzeDocument(operation, document);
-
-            // Traiter la décision IA
-            processAIDecision(operation, aiValidation);
-
-        } catch (Exception e) {
-            log.error("❌ Error during AI analysis, operation will require manual review", e);
-            // L'opération reste en PENDING pour revue manuelle
-        }
-
         return document;
-    }
-
-    /**
-     * Traite la décision de l'IA et met à jour l'opération en conséquence
-     */
-    @Transactional
-    public void processAIDecision(Operation operation, AIValidation aiValidation) {
-        AIDecision decision = aiValidation.getDecision();
-
-        log.info("🎯 Processing AI decision: {} for operation #{}", decision, operation.getId());
-
-        switch (decision) {
-            case APPROVE:
-                // Auto-approuver l'opération
-                if (aiValidation.getConfidenceScore() >= 0.85) {
-                    executeOperation(operation);
-                    operation.setStatus(OperationStatus.APPROVED);
-                    operation.setExecutedAt(LocalDateTime.now());
-                    operationRepository.save(operation);
-                    log.info("✅ Operation #{} auto-approved by AI", operation.getId());
-                } else {
-                    // Confiance insuffisante, nécessite revue humaine
-                    log.info("⚠️ Operation #{} requires human review (low confidence)", operation.getId());
-                }
-                break;
-
-            case REJECT:
-                // Auto-rejeter l'opération
-                if (aiValidation.getConfidenceScore() >= 0.85) {
-                    operation.setStatus(OperationStatus.REJECTED);
-                    operation.setValidatedAt(LocalDateTime.now());
-                    operationRepository.save(operation);
-                    log.info("❌ Operation #{} auto-rejected by AI", operation.getId());
-                } else {
-                    // Confiance insuffisante, nécessite revue humaine
-                    log.info("⚠️ Operation #{} requires human review (low confidence)", operation.getId());
-                }
-                break;
-
-            case NEED_HUMAN_REVIEW:
-                // Laisser en PENDING pour validation humaine
-                log.info("👤 Operation #{} requires human review", operation.getId());
-                break;
-        }
-    }
-
-    /**
-     * Exécute l'opération bancaire (mise à jour des soldes)
-     */
-    private void executeOperation(Operation operation) {
-        switch (operation.getType()) {
-            case DEPOSIT:
-                operation.getAccountSource().setBalance(
-                        operation.getAccountSource().getBalance().add(operation.getAmount())
-                );
-                break;
-
-            case WITHDRAWAL:
-                operation.getAccountSource().setBalance(
-                        operation.getAccountSource().getBalance().subtract(operation.getAmount())
-                );
-                break;
-
-            case TRANSFER:
-                operation.getAccountSource().setBalance(
-                        operation.getAccountSource().getBalance().subtract(operation.getAmount())
-                );
-                operation.getAccountDestination().setBalance(
-                        operation.getAccountDestination().getBalance().add(operation.getAmount())
-                );
-                break;
-        }
     }
 
     public Document getDocumentByOperationId(Long operationId) {

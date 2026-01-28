@@ -2,7 +2,6 @@ package com.example.Al.Baraka.config;
 
 import com.example.Al.Baraka.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -22,10 +21,13 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
-import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.beans.factory.annotation.Value;
 
-import javax.sql.DataSource;
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -35,97 +37,42 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
-    private final DataSource dataSource;
 
     /**
      * Configuration OAuth2 pour l'endpoint /api/agent/operations/pending
      * Priorité 1
      */
-    @Bean
-    @Order(1)
-    public SecurityFilterChain oauth2SecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .securityMatcher("/api/agent/operations/pending")
-                .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/agent/operations/pending").hasAuthority("SCOPE_operations.read")
-                )
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(new KeycloakJwtAuthenticationConverter()))
-                )
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                );
-
-        return http.build();
-    }
-
-    /**
-     * Configuration pour l'interface Web Thymeleaf
-     * Priorité 2 - Session-based avec Remember-Me
-     */
-    @Bean
-    @Order(2)
-    public SecurityFilterChain webSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .securityMatcher("/web/**", "/login", "/logout", "/", "/css/**", "/js/**", "/images/**")
-                .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/h2-console/**")
-                )
-                .authorizeHttpRequests(auth -> auth
-                        // Ressources publiques
-                        .requestMatchers("/", "/login", "/css/**", "/js/**", "/images/**").permitAll()
-                        .requestMatchers("/h2-console/**").permitAll()
-
-                        // Pages web par rôle
-                        .requestMatchers("/web/client/**").hasRole("CLIENT")
-                        .requestMatchers("/web/agent/**").hasRole("AGENT_BANCAIRE")
-                        .requestMatchers("/web/admin/**").hasRole("ADMIN")
-
-                        .anyRequest().authenticated()
-                )
-                .formLogin(form -> form
-                        .loginPage("/login")
-                        .loginProcessingUrl("/login")
-                        .defaultSuccessUrl("/web/dashboard", true)
-                        .failureUrl("/login?error=true")
-                        .permitAll()
-                )
-                .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .logoutSuccessUrl("/login?logout=true")
-                        .invalidateHttpSession(true)
-                        .deleteCookies("JSESSIONID", "remember-me")
-                        .permitAll()
-                )
-                .rememberMe(remember -> remember
-                        .key("albaraka-remember-me-key")
-                        .tokenRepository(persistentTokenRepository())
-                        .tokenValiditySeconds(7 * 24 * 60 * 60) // 7 jours
-                        .userDetailsService(userDetailsService)
-                )
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-                        .maximumSessions(1)
-                        .maxSessionsPreventsLogin(false)
-                );
-
-        // Pour H2 Console
-        http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
-
-        return http.build();
-    }
+//    @Bean
+//    @Order(1)
+//    public SecurityFilterChain oauth2SecurityFilterChain(HttpSecurity http) throws Exception {
+//        http
+//                .securityMatcher("/api/agent/operations/pending")
+//                .csrf(AbstractHttpConfigurer::disable)
+//                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+//                .authorizeHttpRequests(auth -> auth
+//                        .requestMatchers("/api/agent/operations/pending").hasAuthority("SCOPE_operations.read")
+//                )
+//                .oauth2ResourceServer(oauth2 -> oauth2
+//                        .jwt(jwt -> jwt.jwtAuthenticationConverter(new KeycloakJwtAuthenticationConverter()))
+//                )
+//                .sessionManagement(session -> session
+//                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+//                );
+//
+//        return http.build();
+//    }
 
     /**
      * Configuration JWT pour les endpoints API
-     * Priorité 3
+     * Priorité 2
      */
     @Bean
-    @Order(3)
+    @Order(2)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .securityMatcher("/api/**", "/auth/**")
                 .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                         // Endpoints publics
                         .requestMatchers("/auth/**").permitAll()
@@ -134,7 +81,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/client/**").hasRole("CLIENT")
                         .requestMatchers("/api/agent/**").hasRole("AGENT_BANCAIRE")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/ai-test/**").permitAll() // Pour les tests
 
                         .anyRequest().authenticated()
                 )
@@ -148,14 +94,48 @@ public class SecurityConfig {
     }
 
     /**
-     * Repository pour les tokens Remember-Me persistants
+     * Configuration CORS pour Angular
      */
     @Bean
-    public PersistentTokenRepository persistentTokenRepository() {
-        JdbcTokenRepositoryImpl tokenRepository = new JdbcTokenRepositoryImpl();
-        tokenRepository.setDataSource(dataSource);
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
 
-        return tokenRepository;
+        // Autoriser Angular (dev et prod)
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:4200",           // Angular dev server
+                "http://localhost:4201",
+                "http://localhost:8080",
+                "https://your-production-domain.com"
+        ));
+
+        // Méthodes HTTP autorisées
+        configuration.setAllowedMethods(Arrays.asList(
+                "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
+        ));
+
+        // Headers autorisés
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "X-Requested-With"
+        ));
+
+        // Exposer les headers pour le client
+        configuration.setExposedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Disposition"
+        ));
+
+        // Autoriser les credentials (cookies, authorization headers)
+        configuration.setAllowCredentials(true);
+
+        // Durée de cache de la config CORS (1 heure)
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
     @Bean

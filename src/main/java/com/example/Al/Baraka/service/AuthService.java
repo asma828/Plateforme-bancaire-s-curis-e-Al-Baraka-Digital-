@@ -107,6 +107,8 @@ public class AuthService {
                 .build();
     }
 
+
+
     private String generateAccountNumber() {
         // Générer un numéro de compte unique (format: AB-XXXXXX)
         String accountNumber;
